@@ -1,0 +1,57 @@
+# Dependências principais
+langchain>=0.3.19
+langchain-openai>=0.3.7
+langchain-community>=0.3.18
+langchain-core>=0.3.39
+openai>=1.58.1
+pinecone>=6.0.1
+tiktoken>=0.4.0
+python-dotenv>=1.0.0
+colorama>=0.4.6
+streamlit>=1.24.0
+Pillow>=9.5.0
+
+# Dependências para logging
+loguru>=0.7.0
+
+# Dependências para banco de dados
+psycopg2-binary>=2.9.6
+sqlalchemy>=2.0.19
+
+# Dependências para processamento de documentos
+PyPDF2>=3.0.1
+docx2txt>=0.8
+python-pptx>=0.6.21
+
+# Processamento de documentos
+python-docx>=0.8.11
+pdfminer.six>=20221105
+
+# Utilitários
+tqdm>=4.65.0
+uuid>=1.30
+requests>=2.31.0
+
+# Plotly
+plotly>=5.14.0
+
+# Pandas
+pandas>=1.5.3
+pillow>=9.5.0
+
+# Novas dependências
+fastapi>=0.68.0
+uvicorn>=0.15.0
+sqlalchemy>=1.4.0
+python-multipart>=0.0.5
+aiofiles>=0.7.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+pydantic>=1.8.0
+numpy>=1.21.0
+scikit-learn>=0.24.2
+python-dotenv>=0.19.0
+requests>=2.26.0
+aiohttp>=3.8.0
+tenacity>=8.0.0
+tiktoken>=0.3.0 
