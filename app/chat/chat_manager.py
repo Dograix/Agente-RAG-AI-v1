@@ -67,7 +67,7 @@ class ChatManager:
         6. Você APENAS pode responder perguntas relacionadas ao Sistema Gestor de Documentos RAG e seus processos
         7. Para perguntas sobre outros sistemas, produtos ou serviços não relacionados, explique que não possui essas informações
         
-        Lembre-se: Sua função é ajudar o usuário a entender o Sistema Gestor de Documentos RAG e seus processos, conforme documentado nos arquivos da empresa."""
+        Lembre-se: Sua função é ajudar o usuário a entender o Sistema Gestor e seus processos, conforme documentado nos arquivos da empresa."""
     
     def create_conversation(self, title: str = None) -> Conversation:
         """Cria uma nova conversa"""
@@ -430,8 +430,8 @@ class ChatManager:
             
             elif response_type == "general_knowledge":
                 # Resposta para perguntas de conhecimento geral
-                system_prompt = """Você é um assistente útil e amigável especializado no Sistema Gestor de Documentos RAG.
-                Esta mensagem é sobre conhecimento geral não relacionado ao Sistema Gestor de Documentos RAG.
+                system_prompt = """Você é um assistente útil e amigável especializado no Sistema Gestor.
+                Esta mensagem é sobre conhecimento geral não relacionado ao Sistema Gestor.
                 Explique educadamente que você é especializado em responder perguntas sobre o Sistema Gestor de Documentos RAG e seus processos,
                 e que não possui informações específicas sobre temas gerais como esportes, entretenimento, etc.
                 Ofereça ajudar com perguntas relacionadas ao Sistema Gestor de Documentos RAG, como processar documentos, listar documentos, 

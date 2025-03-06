@@ -1,27 +1,49 @@
 import React from 'react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
-import { theme } from './theme';
+import { createTheme } from '@mui/material/styles';
 import AppRoutes from './routes';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            refetchOnWindowFocus: false,
-            retry: 1,
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 5000,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 2,
+    },
+  },
+});
+
+// Tema escuro inspirado no ChatGPT
+const theme = createTheme({
+    palette: {
+        mode: 'dark',
+        background: {
+            default: '#343541',
+            paper: '#444654',
+        },
+        text: {
+            primary: '#FFFFFF',
+            secondary: 'rgba(255, 255, 255, 0.7)',
         },
     },
 });
 
-const App: React.FC = () => {
+function App() {
     return (
         <QueryClientProvider client={queryClient}>
-            <ThemeProvider theme={theme}>
-                <CssBaseline />
-                <AppRoutes />
-            </ThemeProvider>
+            <BrowserRouter>
+                <ThemeProvider theme={theme}>
+                    <CssBaseline />
+                    <AppRoutes />
+                </ThemeProvider>
+            </BrowserRouter>
         </QueryClientProvider>
     );
-};
+}
 
 export default App; 

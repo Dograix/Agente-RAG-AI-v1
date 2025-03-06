@@ -15,6 +15,7 @@ class Conversation:
         self.updated_at = self.created_at
         self.messages = []
         self.metadata = {}
+        self.title = None
     
     def add_message(self, role: str, content: str, metadata: Dict[str, Any] = None):
         """Adiciona uma mensagem à conversa"""
@@ -46,7 +47,8 @@ class Conversation:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "messages": self.messages,
-            "metadata": self.metadata
+            "metadata": self.metadata,
+            "title": self.title
         }
     
     @classmethod
@@ -60,6 +62,7 @@ class Conversation:
         conversation.updated_at = data.get("updated_at", conversation.updated_at)
         conversation.messages = data.get("messages", [])
         conversation.metadata = data.get("metadata", {})
+        conversation.title = data.get("title")
         return conversation
 
 
@@ -93,6 +96,9 @@ class ConversationStore:
         
         if metadata:
             conversation.metadata = metadata
+            # Adiciona o título aos atributos principais da conversa
+            if "title" in metadata:
+                conversation.title = metadata["title"]
         
         # Salva a conversa
         self.save_conversation(conversation)

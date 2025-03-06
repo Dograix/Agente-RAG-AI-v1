@@ -7,118 +7,216 @@ import {
     Typography,
     CircularProgress,
     Divider,
+    Alert,
+    Snackbar,
 } from '@mui/material';
-import { Send as SendIcon, AttachFile as AttachFileIcon } from '@mui/icons-material';
-import { useConversation } from '../../hooks/useConversation';
-import { useDocument } from '../../hooks/useDocument';
-import { UI_CONFIG } from '../../config';
+import {
+    Send as SendIcon,
+    AttachFile as AttachFileIcon,
+} from '@mui/icons-material';
 import ChatMessage from './ChatMessage';
-import FileUploadDialog from '../Documents/FileUploadDialog';
+import { useConversation } from '../../hooks';
+import type { Message } from '../../types/hooks';
+import axios from 'axios';
 
+// Constantes
+const ALLOWED_FILE_TYPES = ['.pdf', '.txt', '.doc', '.docx'];
+
+// Interfaces
 interface ChatWindowProps {
-    conversationId: string;
+    conversationId?: string;
+    onConversationCreated?: (id: string) => void;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId }) => {
+interface UploadResponse {
+    id: string;
+    filename: string;
+    size: number;
+    upload_date: string;
+}
+
+/**
+ * Componente ChatWindow - Exibe a interface de chat com mensagens e controles de entrada
+ */
+const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onConversationCreated }) => {
+    // Estados
     const [message, setMessage] = useState('');
     const [isUploading, setIsUploading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [localConversationId, setLocalConversationId] = useState<string | undefined>(conversationId);
+    const [messages, setMessages] = useState<Message[]>([]);
+
+    // Refs
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Hooks
     const {
-        useMessages,
-        useSendMessage,
-    } = useConversation(conversationId);
+        createConversationMutation,
+        sendMessage,
+        messagesQuery
+    } = useConversation(localConversationId);
 
-    const { useUploadDocument } = useDocument();
+    // Efeitos
+    useEffect(() => {
+        if (messagesQuery?.data) {
+            setMessages(messagesQuery.data);
+        }
+    }, [messagesQuery?.data]);
 
-    const {
-        data: messagesData,
-        isLoading: isLoadingMessages,
-        error: messagesError,
-    } = useMessages(conversationId);
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
 
-    const {
-        mutate: sendMessage,
-        isLoading: isSending,
-    } = useSendMessage();
+    useEffect(() => {
+        setLocalConversationId(conversationId);
+    }, [conversationId]);
 
-    const {
-        mutate: uploadDocument,
-        isLoading: isUploadingDocument,
-    } = useUploadDocument();
-
-    // Rola para a última mensagem
+    // Funções auxiliares
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [messagesData]);
+    /**
+     * Cria uma mensagem temporária do usuário para exibição imediata
+     */
+    const createTempUserMessage = (content: string): Message => ({
+        id: Date.now().toString(),
+        role: 'user',
+        content,
+        conversation_id: localConversationId || 'temp',
+        created_at: new Date().toISOString(),
+    });
 
-    // Envia mensagem
-    const handleSendMessage = async () => {
-        if (!message.trim() || isSending) return;
+    /**
+     * Remove uma mensagem temporária da lista em caso de erro
+     */
+    const removeTempMessage = (messageId: string) => {
+        setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+    };
 
+    /**
+     * Gerencia o envio de mensagem em uma conversa existente
+     */
+    const handleSendInExistingConversation = async (messageText: string, tempMessage: Message) => {
         try {
-            await sendMessage({ conversationId, content: message });
-            setMessage('');
+            await sendMessage(messageText);
+            // Atualiza as mensagens após enviar
+            messagesQuery?.refetch();
         } catch (error) {
-            console.error('Erro ao enviar mensagem:', error);
+            setError("Erro ao enviar mensagem: " + (error instanceof Error ? error.message : "Erro de conexão com o servidor"));
+            removeTempMessage(tempMessage.id);
         }
     };
 
-    // Lida com tecla Enter
-    const handleKeyPress = (event: React.KeyboardEvent) => {
-        if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
+    /**
+     * Gerencia a criação de uma nova conversa e envio da primeira mensagem
+     */
+    const handleCreateConversationAndSendMessage = async (messageText: string, tempMessage: Message) => {
+        try {
+            // Cria a conversa
+            const newConversation = await createConversationMutation.mutateAsync("Nova Conversa");
+            
+            // Atualiza o ID da conversa
+            setLocalConversationId(newConversation.id);
+            onConversationCreated?.(newConversation.id);
+            
+            try {
+                // Envia a mensagem usando o novo ID explicitamente
+                const response = await sendMessage(messageText, newConversation.id);
+                messagesQuery?.refetch();
+                return response;
+            } catch (error) {
+                setError("Erro ao enviar mensagem: " + (error instanceof Error ? error.message : "Erro de conexão com o servidor"));
+                removeTempMessage(tempMessage.id);
+            }
+        } catch (error) {
+            setError("Erro ao criar conversa: " + (error instanceof Error ? error.message : "Erro de conexão com o servidor"));
+            removeTempMessage(tempMessage.id);
+            throw error;
+        }
+    };
+
+    /**
+     * Gerencia o envio de mensagens
+     */
+    const handleSendMessage = async () => {
+        if (message.trim() && !messagesQuery?.isLoading && !createConversationMutation.isPending) {
+            try {
+                setError(null);
+                const messageText = message.trim();
+                setMessage('');
+
+                // Cria a mensagem do usuário localmente
+                const tempUserMessage = createTempUserMessage(messageText);
+                
+                // Adiciona a mensagem do usuário imediatamente
+                setMessages((prev) => [...prev, tempUserMessage]);
+                
+                // Se não houver conversationId, cria uma nova conversa
+                if (!localConversationId) {
+                    await handleCreateConversationAndSendMessage(messageText, tempUserMessage);
+                } else {
+                    await handleSendInExistingConversation(messageText, tempUserMessage);
+                }
+            } catch (error) {
+                console.error('Erro ao enviar mensagem:', error);
+                setError("Erro ao enviar mensagem: " + (error instanceof Error ? error.message : "Erro de conexão com o servidor"));
+            }
+        }
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
             handleSendMessage();
         }
     };
 
-    // Abre diálogo de upload
     const handleAttachClick = () => {
         fileInputRef.current?.click();
     };
 
-    // Processa upload de arquivo
-    const handleFileUpload = async (file: File) => {
+    /**
+     * Gerencia o upload de arquivos
+     */
+    const handleFileUpload = async (file: File): Promise<UploadResponse> => {
         try {
             setIsUploading(true);
-            await uploadDocument(file);
-            // Envia mensagem informando sobre o upload
-            await sendMessage({
-                conversationId,
-                content: `Arquivo enviado: ${file.name}`,
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await axios.post<UploadResponse>('/api/documents/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
             });
+            return response.data;
         } catch (error) {
-            console.error('Erro no upload:', error);
+            console.error('Erro ao fazer upload do arquivo:', error);
+            throw error;
         } finally {
             setIsUploading(false);
         }
     };
 
-    if (messagesError) {
-        return (
-            <Box sx={{ p: 2, textAlign: 'center' }}>
-                <Typography color="error">
-                    Erro ao carregar mensagens. Por favor, tente novamente.
-                </Typography>
-            </Box>
-        );
-    }
-
+    // Renderização do componente
     return (
         <Paper
-            elevation={3}
+            elevation={2}
             sx={{
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                bgcolor: 'background.default',
+                borderRadius: 2,
+                overflow: 'hidden',
             }}
         >
+            {/* Cabeçalho */}
+            <Box sx={{ p: 2, bgcolor: 'background.paper' }}>
+                <Typography variant="h6">Chat</Typography>
+            </Box>
+            <Divider />
+
             {/* Área de mensagens */}
             <Box
                 sx={{
@@ -130,23 +228,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId }) => {
                     gap: 2,
                 }}
             >
-                {isLoadingMessages ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : (
-                    messagesData?.data.map((msg: any) => (
-                        <ChatMessage
-                            key={msg.id}
-                            message={msg}
-                            isUser={msg.role === 'user'}
-                        />
-                    ))
-                )}
+                {messages?.map((msg, index) => (
+                    <ChatMessage
+                        key={index}
+                        message={msg}
+                        isUser={msg.role === 'user'}
+                    />
+                ))}
                 <div ref={messagesEndRef} />
             </Box>
-
-            <Divider />
 
             {/* Área de input */}
             <Box
@@ -161,7 +251,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId }) => {
                 <IconButton
                     color="primary"
                     onClick={handleAttachClick}
-                    disabled={isUploading || isUploadingDocument}
+                    disabled={isUploading}
                 >
                     <AttachFileIcon />
                 </IconButton>
@@ -174,18 +264,30 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId }) => {
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Digite sua mensagem..."
-                    disabled={isSending}
+                    disabled={messagesQuery?.isLoading || createConversationMutation.isPending}
                     sx={{ flex: 1 }}
                 />
 
                 <IconButton
                     color="primary"
                     onClick={handleSendMessage}
-                    disabled={!message.trim() || isSending}
+                    disabled={!message.trim() || messagesQuery?.isLoading || createConversationMutation.isPending}
                 >
-                    {isSending ? <CircularProgress size={24} /> : <SendIcon />}
+                    {(messagesQuery?.isLoading || createConversationMutation.isPending) ? <CircularProgress size={24} /> : <SendIcon />}
                 </IconButton>
             </Box>
+
+            {/* Snackbar para erros */}
+            <Snackbar 
+                open={!!error} 
+                autoHideDuration={6000} 
+                onClose={() => setError(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setError(null)} severity="error" sx={{ width: '100%' }}>
+                    {error}
+                </Alert>
+            </Snackbar>
 
             {/* Input de arquivo oculto */}
             <input
@@ -196,13 +298,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId }) => {
                     const file = e.target.files?.[0];
                     if (file) handleFileUpload(file);
                 }}
-                accept={UI_CONFIG.DOCUMENTS.ALLOWED_FILE_TYPES.join(',')}
-            />
-
-            {/* Diálogo de upload */}
-            <FileUploadDialog
-                open={isUploading}
-                onClose={() => setIsUploading(false)}
+                accept={ALLOWED_FILE_TYPES.join(',')}
             />
         </Paper>
     );

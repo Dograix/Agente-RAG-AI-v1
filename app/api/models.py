@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
 class MessageBase(BaseModel):
@@ -10,11 +10,12 @@ class MessageCreate(MessageBase):
     pass
 
 class MessageResponse(MessageBase):
-    id: int
-    conversation_id: int
+    id: str
+    conversation_id: str
     created_at: datetime
     tokens_used: Optional[int] = None
     processing_time: Optional[float] = None
+    metadata: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
@@ -26,7 +27,7 @@ class ConversationCreate(ConversationBase):
     pass
 
 class ConversationResponse(ConversationBase):
-    id: int
+    id: str = Field(..., description="ID único da conversa")
     created_at: datetime
     updated_at: datetime
 

@@ -30,16 +30,15 @@ def get_embedding_generator() -> EmbeddingGenerator:
         )
 
 def get_chat_manager(
-    db: Session = Depends(get_db),
     pinecone: PineconeManager = Depends(get_pinecone),
     embedding_generator: EmbeddingGenerator = Depends(get_embedding_generator)
 ) -> ChatManager:
     """Retorna uma instância do ChatManager"""
     try:
         return ChatManager(
-            db=db,
             pinecone_manager=pinecone,
-            embedding_generator=embedding_generator
+            embedding_generator=embedding_generator,
+            conversation_store=None  # Usa o store padrão
         )
     except Exception as e:
         logger.error(f"Erro ao inicializar ChatManager: {str(e)}")

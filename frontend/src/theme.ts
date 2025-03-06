@@ -6,28 +6,28 @@ export const theme = createTheme(
     {
         palette: {
             primary: {
-                main: UI_CONFIG.THEME.PRIMARY_COLOR,
+                main: UI_CONFIG.colors.primary.main,
             },
             secondary: {
-                main: UI_CONFIG.THEME.SECONDARY_COLOR,
+                main: UI_CONFIG.colors.secondary.main,
             },
             success: {
-                main: UI_CONFIG.THEME.SUCCESS_COLOR,
+                main: UI_CONFIG.colors.success.main,
             },
             error: {
-                main: UI_CONFIG.THEME.ERROR_COLOR,
+                main: UI_CONFIG.colors.error.main,
             },
             warning: {
-                main: UI_CONFIG.THEME.WARNING_COLOR,
+                main: UI_CONFIG.colors.warning.main,
             },
             info: {
-                main: UI_CONFIG.THEME.INFO_COLOR,
+                main: UI_CONFIG.colors.info.main,
             },
             background: {
-                default: UI_CONFIG.THEME.BACKGROUND_COLOR,
+                default: UI_CONFIG.colors.background.default,
             },
             text: {
-                primary: UI_CONFIG.THEME.TEXT_COLOR,
+                primary: UI_CONFIG.colors.text.primary,
             },
         },
         typography: {

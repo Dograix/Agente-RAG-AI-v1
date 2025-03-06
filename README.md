@@ -1,100 +1,102 @@
-# Sistema Gestor de Documentos RAG
+# RAG App
 
-Um sistema completo para gerenciamento de documentos com Retrieval Augmented Generation (RAG), permitindo processamento inteligente de documentos, busca contextual e chat com IA.
+Aplicação de Recuperação Aumentada por Geração (RAG) que permite carregar documentos e fazer perguntas sobre eles usando IA.
 
 ## Funcionalidades
 
-- **Processamento de Documentos**: Upload, processamento e gerenciamento de documentos.
-- **Chat RAG Inteligente**: Interação com documentos através de chat com IA usando GPT-4o-mini.
-- **Avaliação de Relevância**: Sistema inteligente que avalia a relevância do contexto para cada pergunta.
-- **Interface Web**: Interface amigável para todas as funcionalidades do sistema.
-- **Analytics**: Visualização de estatísticas e métricas de uso do sistema.
+- Gerenciamento de conversas
+- Upload e processamento de documentos
+- Análise de dados e métricas
+- Interface moderna e responsiva
 
-## Componentes do Sistema
+## Tecnologias
 
-- **Vector Store**: Armazenamento de embeddings usando Pinecone.
-- **Processamento de Documentos**: Extração de texto, chunking e geração de embeddings.
-- **Chat Manager**: Gerenciamento de conversas e interação com o modelo de linguagem.
-- **Interface Web**: Interface Streamlit para interação com o sistema.
+- React 19
+- TypeScript
+- Vite
+- React Query
+- Axios
+- Vitest
+- React Testing Library
 
-## Requisitos
+## Pré-requisitos
 
-- Python 3.8+
-- OpenAI API Key
-- Pinecone API Key
-- Dependências listadas em `requirements.txt`
+- Node.js 18+
+- npm 9+
 
 ## Instalação
 
 1. Clone o repositório:
-```
-git clone https://github.com/seu-usuario/sistema-rag.git
-cd sistema-rag
+```bash
+git clone https://github.com/seu-usuario/rag-app.git
+cd rag-app
 ```
 
 2. Instale as dependências:
-```
-pip install -r requirements.txt
+```bash
+npm install
 ```
 
 3. Configure as variáveis de ambiente:
+```bash
+cp .env.example .env
 ```
-OPENAI_API_KEY=sua_chave_api_openai
-PINECONE_API_KEY=sua_chave_api_pinecone
-PINECONE_ENVIRONMENT=seu_ambiente_pinecone
-```
+Edite o arquivo `.env` com suas configurações.
 
-## Uso
+## Desenvolvimento
 
-### Interface Web
+Para iniciar o servidor de desenvolvimento:
 
-Para iniciar a interface web:
-
-```
-python run_web.py
+```bash
+npm run dev
 ```
 
-Acesse a interface em: http://localhost:8501
+## Testes
 
-### Processamento de Documentos
+Para rodar os testes:
 
-Para processar documentos existentes:
-
-```
-python process_existing.py
+```bash
+npm test
 ```
 
-### Chat via Terminal
+Para ver a cobertura de testes:
 
-Para iniciar o chat via terminal:
-
+```bash
+npm run test:coverage
 ```
-python chat.py
+
+## Build
+
+Para gerar o build de produção:
+
+```bash
+npm run build
 ```
 
 ## Estrutura do Projeto
 
 ```
-.
-├── app/
-│   ├── api/              # API REST
-│   ├── chat/             # Lógica de chat e interação com LLM
-│   ├── core/             # Configurações e utilitários
-│   ├── database/         # Armazenamento de conversas
-│   ├── document_processing/ # Processamento de documentos
-│   ├── vector_store/     # Gerenciamento de embeddings
-│   └── web/              # Interface web
-├── data/
-│   ├── conversations/    # Armazenamento de conversas
-│   └── db/               # Banco de dados SQLite
-├── documents/            # Documentos para processamento
-├── logs/                 # Logs do sistema
-├── chat.py               # Script para chat via terminal
-├── process_existing.py   # Script para processar documentos existentes
-├── run_web.py            # Script para iniciar a interface web
-└── README.md             # Este arquivo
+src/
+  ├── components/    # Componentes React
+  ├── hooks/         # Custom hooks
+  ├── services/      # Serviços e APIs
+  ├── config/        # Configurações
+  ├── types/         # Tipos TypeScript
+  └── utils/         # Utilitários
+tests/
+  ├── components/    # Testes de componentes
+  ├── hooks/         # Testes de hooks
+  └── setup.ts       # Configuração dos testes
 ```
+
+## Contribuindo
+
+1. Faça o fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Faça commit das suas mudanças (`git commit -am 'Adiciona nova feature'`)
+4. Faça push para a branch (`git push origin feature/nova-feature`)
+5. Abra um Pull Request
 
 ## Licença
 
-Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para mais detalhes. 
+Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para mais detalhes. 

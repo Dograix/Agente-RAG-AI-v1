@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import asyncio
+from datetime import datetime
 
 from .models import (
     ConversationCreate,
@@ -46,7 +47,13 @@ async def create_conversation(
     """Cria uma nova conversa"""
     try:
         db_conversation = chat_manager.create_conversation(conversation.title)
-        return db_conversation
+        # Converte para o formato esperado
+        return {
+            "id": db_conversation.conversation_id,
+            "title": db_conversation.title or conversation.title,  # Usa o título da conversa se disponível
+            "created_at": datetime.fromisoformat(db_conversation.created_at),
+            "updated_at": datetime.fromisoformat(db_conversation.updated_at)
+        }
     except Exception as e:
         logger.error(f"Erro ao criar conversa: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro ao criar conversa")
@@ -55,30 +62,32 @@ async def create_conversation(
 async def list_conversations(
     skip: int = Query(0, description="Número de registros para pular"),
     limit: int = Query(10, description="Limite de registros a retornar"),
-    search: Optional[str] = Query(None, description="Termo para buscar nas conversas"),
-    db: Session = Depends(get_db)
+    chat_manager: ChatManager = Depends(get_chat_manager)
 ):
     """Lista todas as conversas com opção de busca"""
     try:
-        query = db.query(Conversation)
-        if search:
-            query = query.filter(Conversation.title.ilike(f"%{search}%"))
-        conversations = query.offset(skip).limit(limit).all()
-        return conversations
+        conversations = chat_manager.list_conversations(limit=limit, offset=skip)
+        return [
+            {
+                "id": conv["conversation_id"],
+                "title": conv.get("metadata", {}).get("title", "Nova Conversa"),
+                "created_at": datetime.fromisoformat(conv["created_at"]),
+                "updated_at": datetime.fromisoformat(conv["updated_at"])
+            }
+            for conv in conversations
+        ]
     except Exception as e:
         logger.error(f"Erro ao listar conversas: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro ao listar conversas")
 
 @app.get("/conversations/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
-    conversation_id: int,
-    db: Session = Depends(get_db)
+    conversation_id: str,
+    chat_manager: ChatManager = Depends(get_chat_manager)
 ):
     """Obtém uma conversa específica"""
     try:
-        conversation = db.query(Conversation).filter(
-            Conversation.id == conversation_id
-        ).first()
+        conversation = chat_manager.get_conversation(conversation_id)
         
         if conversation is None:
             raise HTTPException(
@@ -86,7 +95,12 @@ async def get_conversation(
                 detail="Conversa não encontrada"
             )
             
-        return conversation
+        return {
+            "id": conversation.conversation_id,
+            "title": conversation.title or "Nova Conversa",
+            "created_at": datetime.fromisoformat(conversation.created_at),
+            "updated_at": datetime.fromisoformat(conversation.updated_at)
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -98,7 +112,7 @@ async def get_conversation(
 
 @app.post("/conversations/{conversation_id}/messages/", response_model=MessageResponse)
 async def create_message(
-    conversation_id: int,
+    conversation_id: str,
     message: MessageCreate,
     chat_manager: ChatManager = Depends(get_chat_manager)
 ):
@@ -108,28 +122,62 @@ async def create_message(
             conversation_id=conversation_id,
             content=message.content
         )
-        return response
+        
+        # Formata a resposta de acordo com o modelo MessageResponse
+        return {
+            "id": response["id"],
+            "conversation_id": conversation_id,
+            "content": response["content"],
+            "role": response["role"],
+            "created_at": datetime.fromisoformat(response["timestamp"]) if "timestamp" in response else datetime.now(),
+            "tokens_used": response.get("metadata", {}).get("tokens_used"),
+            "processing_time": response.get("metadata", {}).get("processing_time"),
+            "metadata": response.get("metadata", {})
+        }
     except Exception as e:
         logger.error(f"Erro ao enviar mensagem: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Erro ao enviar mensagem"
+            detail=f"Erro ao enviar mensagem: {str(e)}"
         )
 
 @app.get("/conversations/{conversation_id}/messages/", response_model=List[MessageResponse])
 async def list_messages(
-    conversation_id: int,
+    conversation_id: str,
     skip: int = 0,
     limit: int = 50,
-    db: Session = Depends(get_db)
+    chat_manager: ChatManager = Depends(get_chat_manager)
 ):
     """Lista mensagens de uma conversa"""
     try:
-        messages = db.query(Message).filter(
-            Message.conversation_id == conversation_id
-        ).offset(skip).limit(limit).all()
+        conversation = chat_manager.get_conversation(conversation_id)
+        if not conversation:
+            raise HTTPException(
+                status_code=404,
+                detail="Conversa não encontrada"
+            )
         
-        return messages
+        messages = []
+        for msg in conversation.messages:
+            if msg["role"] != "system":  # Ignora mensagens do sistema
+                messages.append({
+                    "id": msg.get("id", ""),
+                    "conversation_id": conversation_id,
+                    "content": msg["content"],
+                    "role": msg["role"],
+                    "created_at": datetime.fromisoformat(msg["timestamp"]) if "timestamp" in msg else datetime.now(),
+                    "tokens_used": msg.get("metadata", {}).get("tokens_used"),
+                    "processing_time": msg.get("metadata", {}).get("processing_time"),
+                    "metadata": msg.get("metadata", {})
+                })
+        
+        # Aplica paginação
+        start = skip
+        end = skip + limit
+        return messages[start:end]
+        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Erro ao listar mensagens: {str(e)}")
         raise HTTPException(

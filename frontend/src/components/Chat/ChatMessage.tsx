@@ -1,9 +1,13 @@
 import React from 'react';
 import { Box, Paper, Typography, Avatar } from '@mui/material';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { UI_CONFIG } from '../../config';
-import { Message } from '../../hooks/useConversation';
+import { Person as PersonIcon, SmartToy as BotIcon } from '@mui/icons-material';
+import ReactMarkdown from 'react-markdown';
+
+interface Message {
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp?: string;
+}
 
 interface ChatMessageProps {
     message: Message;
@@ -11,69 +15,71 @@ interface ChatMessageProps {
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser }) => {
-    const formattedTime = format(
-        new Date(message.created_at),
-        'HH:mm',
-        { locale: ptBR }
-    );
-
     return (
         <Box
             sx={{
                 display: 'flex',
+                gap: 2,
+                alignItems: 'flex-start',
                 flexDirection: isUser ? 'row-reverse' : 'row',
-                gap: 1,
-                maxWidth: '80%',
-                alignSelf: isUser ? 'flex-end' : 'flex-start',
             }}
         >
             <Avatar
                 sx={{
                     bgcolor: isUser ? 'primary.main' : 'secondary.main',
-                    width: 32,
-                    height: 32,
                 }}
             >
-                {isUser ? 'U' : 'A'}
+                {isUser ? <PersonIcon /> : <BotIcon />}
             </Avatar>
 
-            <Box sx={{ maxWidth: 'calc(100% - 40px)' }}>
-                <Paper
-                    elevation={1}
+            <Paper
+                elevation={1}
+                sx={{
+                    p: 2,
+                    maxWidth: '70%',
+                    bgcolor: isUser ? 'primary.dark' : 'background.paper',
+                    borderRadius: 2,
+                }}
+            >
+                <Typography
+                    component="div"
                     sx={{
-                        p: 1.5,
-                        bgcolor: isUser ? 'primary.light' : 'background.paper',
-                        borderRadius: 2,
-                        borderTopRightRadius: isUser ? 0 : 2,
-                        borderTopLeftRadius: isUser ? 2 : 0,
+                        '& p': { m: 0 },
+                        '& pre': {
+                            p: 1,
+                            borderRadius: 1,
+                            bgcolor: 'background.default',
+                            overflow: 'auto',
+                        },
+                        '& code': {
+                            fontFamily: 'monospace',
+                            p: 0.5,
+                            borderRadius: 0.5,
+                            bgcolor: 'background.default',
+                        },
                     }}
                 >
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                </Typography>
+
+                {message.timestamp && (
                     <Typography
-                        variant="body1"
+                        variant="caption"
                         sx={{
-                            color: isUser ? 'primary.contrastText' : 'text.primary',
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word',
+                            display: 'block',
+                            mt: 1,
+                            textAlign: isUser ? 'right' : 'left',
+                            color: 'text.secondary',
                         }}
                     >
-                        {message.content}
+                        {new Date(message.timestamp).toLocaleTimeString()}
                     </Typography>
-                </Paper>
-
-                <Typography
-                    variant="caption"
-                    sx={{
-                        mt: 0.5,
-                        display: 'block',
-                        textAlign: isUser ? 'right' : 'left',
-                        color: 'text.secondary',
-                    }}
-                >
-                    {formattedTime}
-                </Typography>
-            </Box>
+                )}
+            </Paper>
         </Box>
     );
 };
+
+export default ChatMessage;
 
  
